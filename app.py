@@ -31,6 +31,14 @@ if menu == "Dashboard Utama":
     st.title("🖥️ Data Control HPP (DC HPP)")
     st.write("Sistem pengolahan data terpusat untuk mendeteksi fluktuasi Harga Pokok Penjualan (HPP).")
     st.info("Silakan buka menu **Gabungkan File** di sebelah kiri untuk memulai proses.")
+    
+    st.markdown("---") # Menambahkan garis pemisah tipis
+    
+    # Menampilkan gambar flowchart agar ukurannya otomatis menyesuaikan lebar layar
+    try:
+        st.image("flowchart.jpg", use_container_width=True)
+    except Exception as e:
+        st.error("Gambar flowchart gagal dimuat. Pastikan nama file di GitHub sudah benar (flowchart.jpg).")
 
 # --- MENU: GABUNGKAN FILE ---
 elif menu == "Gabungkan File":
