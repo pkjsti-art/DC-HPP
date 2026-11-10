@@ -1,13 +1,11 @@
 import streamlit as st
-import pandas as pd  # <--- Tambahkan baris ini
+import pandas as pd
 
 # Import semua fungsi dari folder modules/
 from modules.ui_components import load_cyber_css, render_kpi_metrics
 from modules.cleaning import clean_and_merge_kartu_stok
 from modules.processing import process_hpp_data
 from modules.export import generate_excel_download
-
-# ... (sisa kode ke bawah biarkan sama persis seperti sebelumnya) ...
 
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="Data Control HPP", page_icon="🖥️", layout="wide")
@@ -45,10 +43,8 @@ elif menu == "Gabungkan File":
     
     if st.button("🚀 Gabung Data"):
         if uploaded_files:
-            # Menjalankan animasi loading saat sistem bekerja
             with st.spinner("Terminal: Membersihkan dan menggabungkan data..."):
                 try:
-                    # Memanggil fungsi pembersihan dan menyimpannya di memori
                     df_hasil = clean_and_merge_kartu_stok(uploaded_files)
                     st.session_state['gabungan_kartu_stok'] = df_hasil
                     st.success(f"✅ Berhasil! {len(df_hasil)} baris data berhasil digabungkan.")
@@ -68,7 +64,6 @@ elif menu == "Cross Check HPP":
         st.error("⚠️ Data Master Kartu Stok belum digabungkan. Silakan ke menu 'Gabungkan File'.")
     elif template_file is not None:
         
-        # Jika tombol Proses diklik
         if st.button("⚙️ Proses Data HPP"):
             with st.spinner("Terminal: Menganalisa fluktuasi HPP & menyusun laporan..."):
                 try:
@@ -77,15 +72,14 @@ elif menu == "Cross Check HPP":
                     # 1. Jalankan proses kalkulasi
                     df_lap, df_cek, df_adj = process_hpp_data(df_gabung, template_file)
                     
-                    # 2. Ambil metrik untuk KPI Card
+                    # 2. Ambil metrik untuk KPI Card (Kalikan 100 hanya untuk tampilan layar)
                     max_naik = df_cek['Persentase Selisih (%)'].max()
                     max_turun = df_cek['Persentase Selisih (%)'].min()
                     
-                    # Simpan metrik ke state
                     st.session_state['metrik_data'] = {
                         'total': len(df_cek),
-                        'naik': max_naik if pd.notna(max_naik) else 0,
-                        'turun': max_turun if pd.notna(max_turun) else 0
+                        'naik': (max_naik * 100) if pd.notna(max_naik) else 0,
+                        'turun': (max_turun * 100) if pd.notna(max_turun) else 0
                     }
                     
                     # 3. Generate file excel di background dan simpan ke state
@@ -99,13 +93,11 @@ elif menu == "Cross Check HPP":
         if st.session_state['data_excel_siap'] is not None:
             st.markdown("---")
             
-            # Tampilkan KPI Dashboard
             metrik = st.session_state['metrik_data']
             render_kpi_metrics(metrik['total'], round(metrik['naik'], 2), round(metrik['turun'], 2))
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Tombol unduh khusus Streamlit yang tidak mereset halaman
             st.download_button(
                 label="⬇️ Download Output Hasil (Excel)",
                 data=st.session_state['data_excel_siap'],
