@@ -20,13 +20,11 @@ if 'metrik_data' not in st.session_state:
     st.session_state['metrik_data'] = None
 
 # --- SIDEBAR & NAVIGASI ---
-st.sidebar.markdown(
-    "<h2 style='text-align: center; font-family: Space Grotesk;'>CONTROL PANEL ⚙️</h2>", 
-    unsafe_allow_html=True
-)
+# Label dikosongkan dan disembunyikan agar tampilan lebih bersih dan minimalis
 menu = st.sidebar.radio(
-    "Navigasi Modul:",
-    ["Dashboard Utama", "Gabungkan File", "Cross Check HPP"]
+    "",
+    ["Dashboard Utama", "Gabungkan File", "Cross Check HPP"],
+    label_visibility="collapsed"
 )
 
 # --- MENU: DASHBOARD UTAMA ---
