@@ -4,11 +4,10 @@ import numpy as np
 def process_hpp_data(df_gabungan, template_file):
     """
     Fungsi untuk mengecek fluktuasi harga antar baris di varian yang sama,
-    dan menuliskan narasinya ke dalam Template Laporan.
+    dan menuliskan narasinya ke dalam Template Laporan dengan ikon grafik dan enter otomatis.
     """
     
     # 1. PENCARIAN KOLOM SPESIFIK
-    # Di Master: Cari kolom yang namanya PERSIS 'variant'
     col_variant = [col for col in df_gabungan.columns if col.strip().lower() == 'variant'][0]
     col_price = [col for col in df_gabungan.columns if 'price per unit' in col.lower()][0]
     col_desc = [col for col in df_gabungan.columns if 'deskripsi' in col.lower() or 'desc' in col.lower()][0]
@@ -43,14 +42,12 @@ def process_hpp_data(df_gabungan, template_file):
     
     df_template = pd.read_excel(template_file)
     
-    # Di Template: Cari kolom yang MENGANDUNG kata 'variant code'
     col_variant_template = [col for col in df_template.columns if 'variant code' in col.lower()][0]
     
     if "Indikasi Faktor Persentase Naik Turun HPP" not in df_template.columns:
         df_template["Indikasi Faktor Persentase Naik Turun HPP"] = ""
         
-    # Memotong sebelum strip (menangani strip biasa "-", en-dash "–", dan em-dash "—")
-    # menghapus SEMUA spasi, dan menjadikan huruf kapital
+    # Menangani strip biasa "-", en-dash "–", dan em-dash "—"
     df_gabungan['Variant_Key'] = df_gabungan[col_variant].astype(str).apply(
         lambda x: x.replace('—', '-').replace('–', '-').split('-')[0].replace(" ", "").upper()
     )
@@ -64,35 +61,32 @@ def process_hpp_data(df_gabungan, template_file):
         if df_kelompok.empty or df_kelompok['Persentase Selisih (%)'].isna().all():
             continue
             
-        # FILTER LOGIKA: Abaikan 0%, pisahkan murni yang Naik (>0) dan Turun (<0)
         df_naik = df_kelompok[df_kelompok['Persentase Selisih (%)'] > 0]
         df_turun = df_kelompok[df_kelompok['Persentase Selisih (%)'] < 0]
         
-        narasi = ""
+        # Menggunakan list untuk menampung teks, agar mudah digabung dengan enter (newline)
+        narasi_parts = []
         
-        # Ambil SATU yang paling NAIK ekstrim (jika ada)
+        # Ekstraksi Kenaikan
         if not df_naik.empty:
             idx_max = df_naik['Persentase Selisih (%)'].idxmax()
             val_max = df_naik.loc[idx_max, 'Persentase Selisih (%)']
             desc_max = df_naik.loc[idx_max, col_desc]
             wh_max = df_naik.loc[idx_max, col_wh]
-            narasi += f"ADA KENAIKAN SIGNIFIKAN PADA {desc_max} DI {wh_max} SEBESAR {(val_max * 100):.2f}%."
+            narasi_parts.append(f"📈 NAIK {(val_max * 100):.2f}% Di {wh_max} -> {desc_max}")
             
-        # Ambil SATU yang paling TURUN ekstrim (jika ada)
+        # Ekstraksi Penurunan
         if not df_turun.empty:
             idx_min = df_turun['Persentase Selisih (%)'].idxmin()
             val_min = df_turun.loc[idx_min, 'Persentase Selisih (%)']
             desc_min = df_turun.loc[idx_min, col_desc]
             wh_min = df_turun.loc[idx_min, col_wh]
-            narasi += f" DAN PENURUNAN PADA {desc_min} DI {wh_min} SEBESAR {(abs(val_min) * 100):.2f}%."
+            narasi_parts.append(f"📉 TURUN {(abs(val_min) * 100):.2f}% Di {wh_min} -> {desc_min}")
             
-        if narasi:
-            # Merapikan kalimat jika kebetulan HANYA ada penurunan (tidak ada kenaikan)
-            if narasi.startswith(" DAN "):
-                narasi = narasi.replace(" DAN ", "ADA ", 1)
-                
-            # Masukkan ke Template
-            df_template.loc[df_template['Variant_Key'] == variant_map, "Indikasi Faktor Persentase Naik Turun HPP"] = narasi.strip()
+        # Gabungkan elemen di dalam list dengan enter (\n)
+        if narasi_parts:
+            narasi_final = "\n".join(narasi_parts)
+            df_template.loc[df_template['Variant_Key'] == variant_map, "Indikasi Faktor Persentase Naik Turun HPP"] = narasi_final
             
     # ========================================================
     # TAHAP 3: FILTER DATA 'ADJ' UNTUK REKAPITULASI
@@ -100,7 +94,6 @@ def process_hpp_data(df_gabungan, template_file):
     
     df_adj = df_gabungan[df_gabungan[col_desc].astype(str).str.contains('ADJ', case=False, na=False)]
     
-    # Hapus kolom bantuan sistem (Variant_Key dan Harga_Atas) agar output bersih
     df_template = df_template.drop(columns=['Variant_Key'])
     df_gabungan = df_gabungan.drop(columns=['Harga_Atas', 'Variant_Key'])
     
