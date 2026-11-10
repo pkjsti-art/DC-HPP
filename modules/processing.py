@@ -49,9 +49,14 @@ def process_hpp_data(df_gabungan, template_file):
     if "Indikasi Faktor Persentase Naik Turun HPP" not in df_template.columns:
         df_template["Indikasi Faktor Persentase Naik Turun HPP"] = ""
         
-    # Memotong sebelum strip "-", menghapus SEMUA spasi, dan menjadikan huruf kapital
-    df_gabungan['Variant_Key'] = df_gabungan[col_variant].astype(str).apply(lambda x: x.split('-')[0].replace(" ", "").upper())
-    df_template['Variant_Key'] = df_template[col_variant_template].astype(str).apply(lambda x: str(x).replace(" ", "").upper())
+    # Memotong sebelum strip (menangani strip biasa "-", en-dash "–", dan em-dash "—")
+    # menghapus SEMUA spasi, dan menjadikan huruf kapital
+    df_gabungan['Variant_Key'] = df_gabungan[col_variant].astype(str).apply(
+        lambda x: x.replace('—', '-').replace('–', '-').split('-')[0].replace(" ", "").upper()
+    )
+    df_template['Variant_Key'] = df_template[col_variant_template].astype(str).apply(
+        lambda x: str(x).replace(" ", "").upper()
+    )
     
     for variant_map in df_gabungan['Variant_Key'].unique():
         df_kelompok = df_gabungan[df_gabungan['Variant_Key'] == variant_map]
