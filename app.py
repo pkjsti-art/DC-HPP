@@ -1,10 +1,13 @@
 import streamlit as st
+import pandas as pd  # <--- Tambahkan baris ini
 
 # Import semua fungsi dari folder modules/
 from modules.ui_components import load_cyber_css, render_kpi_metrics
 from modules.cleaning import clean_and_merge_kartu_stok
 from modules.processing import process_hpp_data
 from modules.export import generate_excel_download
+
+# ... (sisa kode ke bawah biarkan sama persis seperti sebelumnya) ...
 
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="Data Control HPP", page_icon="🖥️", layout="wide")
