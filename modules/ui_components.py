@@ -1,7 +1,7 @@
 import streamlit as st
 
 def load_cyber_css():
-    """Menginjeksi Custom CSS untuk tema Galaxy, Glassmorphism, dan Panel Transparan"""
+    """Menginjeksi Custom CSS untuk tema Galaxy dengan Sidebar Cozy & Seamless"""
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -13,43 +13,55 @@ def load_cyber_css():
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
         
-        /* Sidebar dengan efek kaca (Glassmorphism) dan blur transparan */
+        /* Sidebar Cozy & Seamless (Sangat transparan, garis batas sangat halus) */
         [data-testid="stSidebar"] {
-            background-color: rgba(10, 5, 20, 0.4) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border-right: 1px solid rgba(138, 43, 226, 0.2) !important;
+            background-color: rgba(10, 5, 20, 0.15) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
         }
         
-        /* Teks Sidebar */
-        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2 {
-            color: #c084fc !important;
-            text-shadow: 0 0 15px rgba(192, 132, 252, 0.4);
-            font-weight: 600;
+        /* Beri jarak atas agar menu tidak terlalu mepet dengan ujung layar */
+        [data-testid="stSidebar"] > div:first-child {
+            padding-top: 3rem;
         }
 
-        /* Tombol Navigasi Sidebar */
+        /* --- ROMBAK TOTAL MENU NAVIGASI (RADIO BUTTONS) --- */
+        /* 1. Sembunyikan lingkaran (bullet) bawaan */
+        div[role="radiogroup"] > label > div:first-child {
+            display: none !important;
+        }
+        
+        /* 2. Desain tab menu yang cozy dan mulus */
         div[role="radiogroup"] label {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 10px 15px;
-            margin-bottom: 10px;
+            background: transparent;
+            border: none !important;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 8px;
             color: #94A3B8;
-            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        /* 3. Efek Hover (Bergeser lembut ke kanan saat disentuh kursor) */
         div[role="radiogroup"] label:hover {
-            border-color: rgba(192, 132, 252, 0.4);
-            background: rgba(192, 132, 252, 0.05);
-            color: #e879f9;
+            background: rgba(168, 85, 247, 0.08);
+            color: #d8b4fe;
+            transform: translateX(6px);
         }
+        
+        /* 4. Menu Aktif (Selected) - Glow lembut di sebelah kiri */
         div[role="radiogroup"] label[data-selected="true"] {
-            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0) 100%);
-            border-left: 3px solid #a855f7;
-            border-color: rgba(168, 85, 247, 0.2);
-            color: #f3e8ff !important;
-            box-shadow: inset 10px 0 20px -10px rgba(168, 85, 247, 0.2);
+            background: linear-gradient(90deg, rgba(168, 85, 247, 0.15) 0%, rgba(0,0,0,0) 100%) !important;
+            border-left: 4px solid #c084fc !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            box-shadow: none !important;
         }
+        /* -------------------------------------------------- */
         
         /* Tombol Utama (Aksi) - Gradasi Transparan bercahaya */
         .stButton>button {
