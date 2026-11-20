@@ -2,16 +2,24 @@ import pandas as pd
 import io
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 
-def generate_excel_download(df_laporan, df_hasil_cek, df_adj, df_master_talang=None, df_rekap_talang=None):
+def generate_excel_download(
+    df_laporan, 
+    df_hasil_cek, 
+    df_adj, 
+    df_master_talang=None, 
+    df_rekap_talang=None, 
+    df_mb_to=None
+):
     """
     Membungkus hasil pengolahan ke dalam satu file Excel.
-    - Default: 3 sheet (Laporan, Hasil Cek Kartu Stok, Data ADJ)
-    - Jika data Pindah Gudang tersedia: +2 sheet (DATA MASTER TALANG, DATA REKAP TALANG)
+    - Wajib: Laporan, Hasil Cek Kartu Stok, Data ADJ
+    - Opsional Talang: DATA MASTER TALANG, DATA REKAP TALANG
+    - Opsional MB TO: DATA MASTER MB TO
     """
     output = io.BytesIO()
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # --- SHEET WAJIB (TIDAK DIUBAH) ---
+        # --- SHEET WAJIB ---
         df_laporan.to_excel(writer, sheet_name='Laporan', index=False)
         df_hasil_cek.to_excel(writer, sheet_name='Hasil Cek Kartu Stok', index=False)
         df_adj.to_excel(writer, sheet_name='Data ADJ', index=False)
@@ -51,7 +59,6 @@ def generate_excel_download(df_laporan, df_hasil_cek, df_adj, df_master_talang=N
             df_master_talang.to_excel(writer, sheet_name='DATA MASTER TALANG', index=False)
             df_rekap_talang.to_excel(writer, sheet_name='DATA REKAP TALANG', index=False)
             
-            # Styling Sheet DATA REKAP TALANG
             ws_rekap = writer.sheets['DATA REKAP TALANG']
             
             header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
@@ -63,14 +70,12 @@ def generate_excel_download(df_laporan, df_hasil_cek, df_adj, df_master_talang=N
                 bottom=Side(style='thin', color='D9D9D9')
             )
             
-            # Format Header (Baris 1)
             for col in range(1, 4):
                 cell = ws_rekap.cell(row=1, column=col)
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.border = thin_border
                 
-            # Format Isi Data & Angka Ribuan Desimal
             last_data_row = ws_rekap.max_row
             for row in range(2, last_data_row + 1):
                 for col in range(1, 4):
@@ -79,7 +84,6 @@ def generate_excel_download(df_laporan, df_hasil_cek, df_adj, df_master_talang=N
                     if col == 3:
                         cell.number_format = '#,##0.00'
                         
-            # Tambahkan Baris Grand Total dengan Rumus SUM Dinamis
             total_row = last_data_row + 1
             for col in range(1, 4):
                 cell = ws_rekap.cell(row=total_row, column=col)
@@ -91,7 +95,6 @@ def generate_excel_download(df_laporan, df_hasil_cek, df_adj, df_master_talang=N
             total_cell.value = f"=SUM(C2:C{last_data_row})" if last_data_row >= 2 else 0
             total_cell.number_format = '#,##0.00'
             
-            # Auto-fit Lebar Kolom
             for col in ws_rekap.columns:
                 max_length = 0
                 col_letter = col[0].column_letter
@@ -100,6 +103,10 @@ def generate_excel_download(df_laporan, df_hasil_cek, df_adj, df_master_talang=N
                     if len(val_str) > max_length:
                         max_length = len(val_str)
                 ws_rekap.column_dimensions[col_letter].width = max_length + 5
+
+        # --- SHEET OPSIONAL: MASTER MB TO ---
+        if df_mb_to is not None:
+            df_mb_to.to_excel(writer, sheet_name='DATA MASTER MB TO', index=False)
 
     processed_data = output.getvalue()
     return processed_data
