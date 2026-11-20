@@ -51,7 +51,7 @@ def process_hpp_data(df_gabungan, template_file):
         
         narasi_parts = []
         
-        # Ekstraksi Kenaikan menggunakan simbol ▲ standar (tanpa emoji warna)
+        # Ekstraksi Kenaikan menggunakan simbol ▲ standar
         if not df_naik.empty:
             idx_max = df_naik['Persentase Selisih (%)'].idxmax()
             val_max = df_naik.loc[idx_max, 'Persentase Selisih (%)']
@@ -59,7 +59,7 @@ def process_hpp_data(df_gabungan, template_file):
             wh_max = df_naik.loc[idx_max, col_wh]
             narasi_parts.append(f"▲ NAIK {(val_max * 100):.2f}% Di {wh_max} -> {desc_max}")
             
-        # Ekstraksi Penurunan menggunakan simbol ▼ standar (tanpa emoji warna)
+        # Ekstraksi Penurunan menggunakan simbol ▼ standar
         if not df_turun.empty:
             idx_min = df_turun['Persentase Selisih (%)'].idxmin()
             val_min = df_turun.loc[idx_min, 'Persentase Selisih (%)']
@@ -72,10 +72,22 @@ def process_hpp_data(df_gabungan, template_file):
             df_template.loc[df_template['Variant_Key'] == variant_map, "Indikasi Faktor Persentase Naik Turun HPP"] = narasi_final
             
     # ========================================================
-    # TAHAP 3: FILTER DATA 'ADJ'
+    # TAHAP 3: FILTER DATA 'ADJ' & RENDER ULANG KOLOM 'NO'
     # ========================================================
-    df_adj = df_gabungan[df_gabungan[col_desc].astype(str).str.contains('ADJ', case=False, na=False)]
+    df_adj = df_gabungan[df_gabungan[col_desc].astype(str).str.contains('ADJ', case=False, na=False)].copy()
+    
     df_template = df_template.drop(columns=['Variant_Key'])
-    df_gabungan = df_gabungan.drop(columns=['Harga_Atas', 'Variant_Key'])
+    df_gabungan = df_gabungan.drop(columns=['Harga_Atas', 'Variant_Key']).reset_index(drop=True)
+    df_adj = df_adj.drop(columns=['Harga_Atas', 'Variant_Key']).reset_index(drop=True)
+    
+    # Render ulang kolom 'No' urut dari 1 pada Hasil Cek Kartu Stok
+    no_cols_gabungan = [col for col in df_gabungan.columns if col.strip().lower() == 'no']
+    if no_cols_gabungan:
+        df_gabungan[no_cols_gabungan[0]] = range(1, len(df_gabungan) + 1)
+        
+    # Render ulang kolom 'No' urut dari 1 pada Data ADJ
+    no_cols_adj = [col for col in df_adj.columns if col.strip().lower() == 'no']
+    if no_cols_adj:
+        df_adj[no_cols_adj[0]] = range(1, len(df_adj) + 1)
     
     return df_template, df_gabungan, df_adj
