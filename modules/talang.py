@@ -7,21 +7,16 @@ def clean_and_merge_pindah_gudang(uploaded_files):
     - Gabung semua file dengan 1 header
     - Filter Status == 'active'
     - Filter Keterangan mengandung kata 'TALANG'
+    - Render ulang kolom No urut dari 1
     """
     list_df = []
     
     for file in uploaded_files:
-        # 1. Baca Excel dengan melewati 3 baris teratas
         df = pd.read_excel(file, skiprows=3)
-        
-        # Hapus baris yang seluruhnya kosong
         df = df.dropna(how='all')
-        
-        # Rapikan spasi tersembunyi di nama kolom
         df.columns = [str(col).strip() for col in df.columns]
         list_df.append(df)
         
-    # 2. Gabungkan semua file (otomatis hanya 1 header)
     df_gabungan = pd.concat(list_df, ignore_index=True)
     
     # Deteksi nama kolom secara aman (case-insensitive)
@@ -29,20 +24,24 @@ def clean_and_merge_pindah_gudang(uploaded_files):
     col_ket = [col for col in df_gabungan.columns if col.lower() == 'keterangan'][0]
     col_masuk = [col for col in df_gabungan.columns if col.lower() == 'masuk'][0]
     
-    # 3. Filter hanya baris dengan Status == 'active'
+    # Filter Status == 'active' & Keterangan mengandung 'TALANG'
     df_gabungan = df_gabungan[
         df_gabungan[col_status].astype(str).str.strip().str.lower() == 'active'
     ]
-    
-    # 4. Filter hanya baris dengan Keterangan mengandung 'TALANG'
     df_gabungan = df_gabungan[
         df_gabungan[col_ket].astype(str).str.contains('TALANG', case=False, na=False)
     ]
     
     # Pastikan kolom Masuk bertipe angka murni
     df_gabungan[col_masuk] = pd.to_numeric(df_gabungan[col_masuk], errors='coerce').fillna(0)
+    df_gabungan = df_gabungan.reset_index(drop=True)
     
-    return df_gabungan.reset_index(drop=True)
+    # Render ulang kolom 'No' urut dari 1
+    no_cols = [col for col in df_gabungan.columns if col.lower() == 'no']
+    if no_cols:
+        df_gabungan[no_cols[0]] = range(1, len(df_gabungan) + 1)
+    
+    return df_gabungan
 
 
 def create_rekap_talang(df_master_talang):
@@ -54,14 +53,12 @@ def create_rekap_talang(df_master_talang):
     col_nama = [col for col in df_master_talang.columns if col.lower() == 'nama variant'][0]
     col_masuk = [col for col in df_master_talang.columns if col.lower() == 'masuk'][0]
     
-    # Kelompokkan berdasarkan Kode Variant & Nama Variant yang unik, lalu total kolom Masuk
     df_rekap = (
         df_master_talang
         .groupby([col_kode, col_nama], as_index=False, sort=False)[col_masuk]
         .sum()
     )
     
-    # Ubah nama kolom sesuai format output
     df_rekap.columns = ['KODE VARIANT', 'NAMA VARIANT', 'TOTAL PG (GR)']
     
     return df_rekap
