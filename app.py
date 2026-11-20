@@ -6,6 +6,7 @@ from modules.ui_components import load_cyber_css, render_kpi_metrics
 from modules.cleaning import clean_and_merge_kartu_stok
 from modules.processing import process_hpp_data
 from modules.talang import clean_and_merge_pindah_gudang, create_rekap_talang
+from modules.mb_to import clean_and_merge_mb_to, add_jumlah_to_to_laporan
 from modules.export import generate_excel_download
 
 # --- KONFIGURASI HALAMAN ---
@@ -17,6 +18,8 @@ if 'gabungan_kartu_stok' not in st.session_state:
     st.session_state['gabungan_kartu_stok'] = None
 if 'master_talang' not in st.session_state:
     st.session_state['master_talang'] = None
+if 'master_mb_to' not in st.session_state:
+    st.session_state['master_mb_to'] = None
 if 'data_excel_siap' not in st.session_state:
     st.session_state['data_excel_siap'] = None
 if 'metrik_data' not in st.session_state:
@@ -52,7 +55,7 @@ elif menu == "Gabungkan File":
     st.markdown("""
         <div class="custom-title-container">
             <h1 class="custom-title" style="font-size: 2.2rem !important;">📂 GABUNGKAN DATA MASTER</h1>
-            <p class="custom-subtitle">Pembersihan (data cleaning) dan penggabungan dataset kartu stok serta pindah gudang</p>
+            <p class="custom-subtitle">Pembersihan (data cleaning) dan penggabungan dataset kartu stok, pindah gudang, serta MB TO</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -74,7 +77,16 @@ elif menu == "Gabungkan File":
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 1 Tombol untuk menggabungkan Kartu Stok & Pindah Gudang (jika ada)
+    # 3. Upload Opsional: Master MB TO
+    uploaded_to_files = st.file_uploader(
+        "Import Data Master MB TO (Opsional - Bisa lebih dari 1 file)", 
+        type=['xlsx', 'xls'], 
+        accept_multiple_files=True
+    )
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 1 Tombol untuk menggabungkan seluruh data yang di-upload
     col_btn_left, col_btn_mid, col_btn_right = st.columns([1, 1, 1])
     with col_btn_mid:
         tombol_gabung = st.button("🚀 GABUNG DATA", use_container_width=True)
@@ -83,27 +95,30 @@ elif menu == "Gabungkan File":
         if uploaded_files:
             with st.spinner("Sistem sedang membersihkan dan mengombinasikan file data..."):
                 try:
-                    # Proses Master Kartu Stok (Wajib)
+                    # 1. Master Kartu Stok (Wajib)
                     df_hasil = clean_and_merge_kartu_stok(uploaded_files)
                     st.session_state['gabungan_kartu_stok'] = df_hasil
-                    
-                    # Reset hasil excel lama agar tidak tertukar dengan sesi sebelumnya
                     st.session_state['data_excel_siap'] = None
                     
-                    # Proses Master Pindah Gudang (Opsional)
+                    pesan_sukses = [f"Master Kartu Stok ({len(df_hasil):,} baris)"]
+                    
+                    # 2. Master Pindah Gudang (Opsional)
                     if uploaded_pg_files:
                         df_pg = clean_and_merge_pindah_gudang(uploaded_pg_files)
                         st.session_state['master_talang'] = df_pg
-                        st.success(
-                            f"✅ Berhasil! Master Kartu Stok ({len(df_hasil):,} baris) & "
-                            f"Master Pindah Gudang Talang ({len(df_pg):,} baris) siap diproses."
-                        )
+                        pesan_sukses.append(f"Master Pindah Gudang Talang ({len(df_pg):,} baris)")
                     else:
                         st.session_state['master_talang'] = None
-                        st.success(
-                            f"✅ Berhasil! Master Kartu Stok ({len(df_hasil):,} baris) siap diproses. "
-                            f"(Tanpa data Pindah Gudang)."
-                        )
+                        
+                    # 3. Master MB TO (Opsional)
+                    if uploaded_to_files:
+                        df_to = clean_and_merge_mb_to(uploaded_to_files)
+                        st.session_state['master_mb_to'] = df_to
+                        pesan_sukses.append(f"Master MB TO ({len(df_to):,} baris)")
+                    else:
+                        st.session_state['master_mb_to'] = None
+                        
+                    st.success("✅ Berhasil! Data siap diproses: " + " | ".join(pesan_sukses))
                 except Exception as e:
                     st.error(f"Gagal mengolah file: {e}")
         else:
@@ -121,12 +136,19 @@ elif menu == "Cross Check HPP":
     # Info status ketersediaan data di memori
     data_ready = st.session_state['gabungan_kartu_stok'] is not None
     talang_ready = st.session_state['master_talang'] is not None
+    to_ready = st.session_state['master_mb_to'] is not None
     
     if data_ready:
+        daftar_aktif = ["Master Kartu Stok"]
+        total_sheet = 3
         if talang_ready:
-            st.info("✅ Data Siap: Master Kartu Stok + Master Pindah Gudang (Talang) akan diproses (Output 5 Sheet).")
-        else:
-            st.info("✅ Data Siap: Master Kartu Stok saja yang akan diproses (Output 3 Sheet).")
+            daftar_aktif.append("Master Pindah Gudang (Talang)")
+            total_sheet += 2
+        if to_ready:
+            daftar_aktif.append("Master MB TO")
+            total_sheet += 1
+            
+        st.info(f"✅ Data Siap: {' + '.join(daftar_aktif)} akan diproses (Output {total_sheet} Sheet).")
             
     template_file = st.file_uploader("Import File Template Laporan yang akan diproses", type=['xlsx', 'xls'])
     
@@ -154,15 +176,20 @@ elif menu == "Cross Check HPP":
                         'turun': (max_turun * 100) if pd.notna(max_turun) else 0
                     }
                     
-                    # Proses Rekap Talang secara opsional jika datanya ada
+                    # Proses Rekap Talang (Opsional)
                     df_master_talang = st.session_state['master_talang']
                     df_rekap_talang = None
                     if df_master_talang is not None:
                         df_rekap_talang = create_rekap_talang(df_master_talang)
+                        
+                    # Proses Jumlah TO pada Laporan (Opsional)
+                    df_mb_to = st.session_state['master_mb_to']
+                    if df_mb_to is not None:
+                        df_lap = add_jumlah_to_to_laporan(df_lap, df_mb_to)
                     
-                    # Generate Excel (3 sheet atau 5 sheet secara otomatis)
+                    # Generate Excel dinamis (3, 4, 5, atau 6 sheet)
                     st.session_state['data_excel_siap'] = generate_excel_download(
-                        df_lap, df_cek, df_adj, df_master_talang, df_rekap_talang
+                        df_lap, df_cek, df_adj, df_master_talang, df_rekap_talang, df_mb_to
                     )
                     st.success("🎉 Analisis selesai! Output data HPP sekarang siap untuk diunduh.")
                     
